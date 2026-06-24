@@ -122,6 +122,14 @@ let cameraStream = null;
 // Geolocation GPS state
 let lastDetectedGeolocation = null;
 
+// User Profile state
+let currentUserProfile = JSON.parse(localStorage.getItem("civicpulse_user_profile")) || {
+  name: "Alex Carter",
+  email: "alex@example.com",
+  avatar: "https://api.dicebear.com/7.x/pixel-art/svg?seed=CivicHero",
+  verified: false
+};
+
 // Predictive Overlay state
 let predictionsActive = false;
 let predictionCircles = [];
@@ -638,11 +646,33 @@ function renderLeaderboard() {
 }
 
 function updateUserProfileDisplay() {
-  const me = leaderboard.find(u => u.name.includes("You") || u.name.includes("Alex"));
-  if (!me) return;
+  // Sync display with currentUserProfile
+  document.getElementById("user-name").textContent = currentUserProfile.name;
+  document.getElementById("user-avatar").src = currentUserProfile.avatar;
   
-  document.getElementById("user-impact-points").textContent = me.points;
-  document.getElementById("user-verifications").textContent = me.resolutions;
+  const verifiedBadge = document.getElementById("user-verified-badge");
+  const unverifiedBadge = document.getElementById("user-unverified-badge");
+  
+  if (currentUserProfile.verified) {
+    if (verifiedBadge) verifiedBadge.style.display = "inline-block";
+    if (unverifiedBadge) unverifiedBadge.style.display = "none";
+    document.getElementById("user-rank").textContent = volunteerMode ? "Verified Civic Hero (Lvl 2)" : "Verified Citizen";
+    document.getElementById("user-rank").style.color = "var(--accent-secondary)";
+  } else {
+    if (verifiedBadge) verifiedBadge.style.display = "none";
+    if (unverifiedBadge) unverifiedBadge.style.display = "inline-block";
+    document.getElementById("user-rank").textContent = "Unverified Citizen";
+    document.getElementById("user-rank").style.color = "var(--accent-danger)";
+  }
+
+  // Find me in leaderboard
+  const me = leaderboard.find(u => u.name.includes("You") || u.name.includes("Alex") || u.name.includes(currentUserProfile.name));
+  if (me) {
+    me.name = `You (${currentUserProfile.name})`;
+    me.avatar = currentUserProfile.avatar;
+    document.getElementById("user-impact-points").textContent = me.points;
+    document.getElementById("user-verifications").textContent = me.resolutions;
+  }
   
   // Badges unlocking checks
   const reporterBadge = document.getElementById("badge-reporter");
@@ -652,18 +682,18 @@ function updateUserProfileDisplay() {
   
   // Report count check
   const reportsCount = issues.filter(i => i.reportedBy === "You").length;
-  if (reportsCount >= 1) reporterBadge.classList.add("unlocked");
+  if (reportsCount >= 1 && reporterBadge) reporterBadge.classList.add("unlocked");
   
   // Category resolution checks
   const resolvedRoads = issues.filter(i => i.status === "resolved" && i.category === "infrastructure" && i.resolvedBy === "You").length;
-  if (resolvedRoads >= 2) potholeBadge.classList.add("unlocked");
+  if (resolvedRoads >= 2 && potholeBadge) potholeBadge.classList.add("unlocked");
   
   const resolvedSanitation = issues.filter(i => i.status === "resolved" && i.category === "sanitation" && i.resolvedBy === "You").length;
-  if (resolvedSanitation >= 2) trashBadge.classList.add("unlocked");
+  if (resolvedSanitation >= 2 && trashBadge) trashBadge.classList.add("unlocked");
   
   // Total resolutions check
-  const totalRes = me.resolutions;
-  if (totalRes >= 5) guardianBadge.classList.add("unlocked");
+  const totalRes = me ? me.resolutions : 0;
+  if (totalRes >= 5 && guardianBadge) guardianBadge.classList.add("unlocked");
 }
 
 // ==========================================================================
@@ -1784,6 +1814,116 @@ function setupEventListeners() {
       commentInput.value = "";
       renderComments(selectedIssueId);
       showToast("Comment posted to community timeline.", "success");
+    });
+  }
+
+  // Account Profile / Registration Modal Controls
+  const profileCard = document.getElementById("user-profile-card");
+  const modalAuth = document.getElementById("modal-auth");
+  const btnCloseAuth = document.getElementById("btn-close-auth");
+  const btnCancelRegister = document.getElementById("btn-cancel-register");
+  const formRegister = document.getElementById("form-register");
+  const formVerify = document.getElementById("form-verify-code");
+  const avatarSeedInput = document.getElementById("reg-avatar-seed");
+  const avatarPreviewImg = document.getElementById("reg-avatar-preview");
+  const btnBackRegister = document.getElementById("btn-back-register");
+
+  const hideAuthModal = () => {
+    if (modalAuth) modalAuth.classList.remove("show");
+  };
+
+  if (profileCard) {
+    profileCard.addEventListener("click", () => {
+      // Pre-fill fields
+      document.getElementById("reg-username").value = currentUserProfile.name;
+      document.getElementById("reg-email").value = currentUserProfile.email;
+      
+      // Auto generate seed from name
+      const defaultSeed = currentUserProfile.name.replace(/\s+/g, '') || "CivicHero";
+      if (avatarSeedInput) avatarSeedInput.value = defaultSeed;
+      if (avatarPreviewImg) avatarPreviewImg.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(defaultSeed)}`;
+      
+      if (formRegister) formRegister.style.display = "block";
+      if (formVerify) formVerify.style.display = "none";
+      document.getElementById("auth-modal-title").innerHTML = `<i class="fa-solid fa-user-gear"></i> Account Profile`;
+      
+      if (modalAuth) modalAuth.classList.add("show");
+    });
+  }
+
+  if (btnCloseAuth) btnCloseAuth.addEventListener("click", hideAuthModal);
+  if (btnCancelRegister) btnCancelRegister.addEventListener("click", hideAuthModal);
+
+  if (avatarSeedInput && avatarPreviewImg) {
+    avatarSeedInput.addEventListener("input", (e) => {
+      const seed = e.target.value.trim() || "CivicHero";
+      avatarPreviewImg.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(seed)}`;
+    });
+  }
+
+  if (formRegister) {
+    formRegister.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = document.getElementById("reg-email").value.trim();
+      
+      const emailDisplay = document.getElementById("verify-email-display");
+      if (emailDisplay) emailDisplay.textContent = email;
+      
+      if (formRegister) formRegister.style.display = "none";
+      if (formVerify) formVerify.style.display = "block";
+      document.getElementById("auth-modal-title").innerHTML = `<i class="fa-solid fa-shield-halved"></i> Verify Account`;
+      
+      showToast("Verification code sent to " + email, "info");
+    });
+  }
+
+  if (btnBackRegister) {
+    btnBackRegister.addEventListener("click", () => {
+      if (formRegister) formRegister.style.display = "block";
+      if (formVerify) formVerify.style.display = "none";
+      document.getElementById("auth-modal-title").innerHTML = `<i class="fa-solid fa-user-gear"></i> Account Profile`;
+    });
+  }
+
+  if (formVerify) {
+    formVerify.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const codeInput = document.getElementById("input-verify-code");
+      const code = codeInput ? codeInput.value.trim() : "";
+      
+      if (code === "1234") {
+        const name = document.getElementById("reg-username").value.trim();
+        const email = document.getElementById("reg-email").value.trim();
+        const seed = avatarSeedInput ? avatarSeedInput.value.trim() : "CivicHero";
+        const avatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(seed)}`;
+        
+        currentUserProfile = {
+          name: name,
+          email: email,
+          avatar: avatarUrl,
+          verified: true
+        };
+        
+        localStorage.setItem("civicpulse_user_profile", JSON.stringify(currentUserProfile));
+        
+        // Sync with leaderboard
+        const meIndex = leaderboard.findIndex(u => u.name.includes("You") || u.name.includes("Alex"));
+        if (meIndex !== -1) {
+          leaderboard[meIndex].name = `You (${name})`;
+          leaderboard[meIndex].avatar = avatarUrl;
+          localStorage.setItem("civicpulse_leaderboard", JSON.stringify(leaderboard));
+        }
+        
+        if (codeInput) codeInput.value = "";
+        
+        hideAuthModal();
+        updateUserProfileDisplay();
+        renderLeaderboard();
+        
+        showToast("Account successfully verified and activated!", "success");
+      } else {
+        showToast("Invalid verification code. Please enter 1234.", "error");
+      }
     });
   }
 }

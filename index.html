@@ -217,11 +217,15 @@
     <section class="grid-col grid-right">
       
       <!-- User Profile Card -->
-      <div class="profile-card glass-card">
+      <div class="profile-card glass-card" id="user-profile-card" style="cursor: pointer;" title="Manage Account & Verification">
         <div class="profile-header">
           <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=CivicHero" alt="Avatar" class="profile-avatar" id="user-avatar">
           <div>
-            <h3 class="profile-name" id="user-name">Alex Carter</h3>
+            <h3 class="profile-name" id="user-name-wrapper">
+              <span id="user-name">Alex Carter</span>
+              <span id="user-verified-badge" style="display: none;" title="Verified Profile"><i class="fa-solid fa-circle-check" style="color: var(--accent-secondary); font-size: 0.75rem; margin-left: 0.25rem;"></i></span>
+              <span id="user-unverified-badge" style="display: inline-block;" title="Unverified Profile"><i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-danger); font-size: 0.75rem; margin-left: 0.25rem;"></i></span>
+            </h3>
             <span class="profile-rank" id="user-rank">Citizen Activist</span>
           </div>
         </div>
@@ -484,6 +488,67 @@
         <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
           <button type="button" class="btn btn-secondary" id="btn-cancel-api-settings">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Account Creation & Verification -->
+  <div class="modal-backdrop" id="modal-auth">
+    <div class="modal-content glass-card" style="width: 400px;">
+      <div class="modal-header">
+        <h2 class="feed-title" id="auth-modal-title"><i class="fa-solid fa-user-plus"></i> Create Civic Account</h2>
+        <button class="modal-close" id="btn-close-auth"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <!-- Stage 1: Register Form -->
+      <form id="form-register">
+        <div class="form-group">
+          <label class="form-label" for="reg-username">Full Name</label>
+          <input type="text" id="reg-username" class="form-input" placeholder="e.g. Alex Carter" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="reg-email">Email Address</label>
+          <input type="email" id="reg-email" class="form-input" placeholder="alex@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-avatar-seed">Avatar Seed (any keyword)</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="text" id="reg-avatar-seed" class="form-input" placeholder="e.g. CivicHero" style="flex: 1;" value="CivicHero">
+            <img id="reg-avatar-preview" src="https://api.dicebear.com/7.x/pixel-art/svg?seed=CivicHero" style="width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--accent-primary); background: #000; object-fit: cover;" alt="Avatar Preview">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-password">Password</label>
+          <input type="password" id="reg-password" class="form-input" placeholder="••••••••" required>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-register">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Account</button>
+        </div>
+      </form>
+
+      <!-- Stage 2: Verification Form (Initially Hidden) -->
+      <form id="form-verify-code" style="display: none;">
+        <div class="form-group" style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.45; margin-bottom: 1rem; background: rgba(0,0,0,0.15); border: 1px solid var(--surface-border); padding: 0.6rem; border-radius: var(--radius-sm);">
+          <i class="fa-solid fa-envelope" style="color: var(--accent-primary);"></i>
+          We have sent a verification code to <strong id="verify-email-display">your email</strong>.
+          <br><br>
+          For demonstration, enter the code: <strong style="color: var(--accent-secondary); font-size: 0.8rem;">1234</strong>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="input-verify-code">4-Digit Verification Code</label>
+          <input type="text" id="input-verify-code" class="form-input" placeholder="0000" maxlength="4" required style="letter-spacing: 0.5rem; text-align: center; font-size: 1.2rem; font-weight: bold;">
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" id="btn-back-register">Back</button>
+          <button type="submit" class="btn btn-primary">Verify & Activate</button>
         </div>
       </form>
     </div>
