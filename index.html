@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CivicPulse | Hyperlocal Civic Action Hub</title>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <!-- Background Glow Orbs -->
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+  <div class="glow-orb orb-3"></div>
+
+  <!-- Header -->
+  <header class="main-header">
+    <div class="logo-container">
+      <div class="logo-icon">
+        <i class="fa-solid fa-hands-holding-circle"></i>
+      </div>
+      <div class="logo-text">
+        <h1>CivicPulse</h1>
+        <span>Hyperlocal Civic Action Hub</span>
+      </div>
+    </div>
+    
+    <div class="header-stats">
+      <div class="header-stat">
+        <span class="header-stat-val" id="stat-resolved-rate">84%</span>
+        <span class="header-stat-label">Resolution Rate</span>
+      </div>
+      <div class="header-stat">
+        <span class="header-stat-val" id="stat-active-issues">12</span>
+        <span class="header-stat-label">Active Issues</span>
+      </div>
+      <div class="header-stat">
+        <span class="header-stat-val" id="stat-volunteers">48</span>
+        <span class="header-stat-label">Civic Heroes</span>
+      </div>
+    </div>
+    
+    <div class="header-actions">
+      <!-- Volunteer / Citizen Mode Toggle -->
+      <div class="toggle-switch-container">
+        <span class="toggle-switch-label"><i class="fa-solid fa-shield-halved"></i> Hero Mode</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="mode-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <button class="btn-api-gear" id="btn-api-settings" title="Gemini Settings">
+        <i class="fa-solid fa-gear"></i>
+      </button>
+      <button class="btn btn-primary" id="btn-new-report">
+        <i class="fa-solid fa-circle-plus"></i> Report Issue
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="dashboard-grid">
+    
+    <!-- LEFT PANEL: Issue List / Feed -->
+    <section class="grid-col grid-left glass-card">
+      <div class="feed-header">
+        <h2 class="feed-title"><i class="fa-solid fa-list-check"></i> Issue Feed</h2>
+        <span class="header-stat-label" id="issue-count">Showing 4 reports</span>
+      </div>
+      
+      <!-- Issue Search Bar -->
+      <div class="feed-search">
+        <input type="text" id="search-issues" class="form-input search-input" placeholder="Search reports...">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      </div>
+      
+      <div class="feed-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="infrastructure">Roads</button>
+        <button class="filter-btn" data-filter="sanitation">Sanitation</button>
+        <button class="filter-btn" data-filter="utilities">Utilities</button>
+        <button class="filter-btn" data-filter="safety">Safety</button>
+      </div>
+      
+      <div class="issues-container" id="issues-list">
+        <!-- Rendered dynamically in app.js -->
+      </div>
+    </section>
+
+    <!-- CENTER PANEL: Map & Agent Simulation Console -->
+    <section class="grid-col grid-center">
+      
+      <!-- Leaflet Map Card -->
+      <div class="map-card glass-card">
+        <div id="map"></div>
+        <div class="map-overlay-controls">
+          <button class="map-control-btn" id="btn-toggle-heatmap">
+            <i class="fa-solid fa-fire"></i> Toggle Heatmap
+          </button>
+          <button class="map-control-btn" id="btn-recenter-map">
+            <i class="fa-solid fa-crosshairs"></i> Recenter
+          </button>
+        </div>
+      </div>
+      
+      <!-- Agent Console Card -->
+      <div class="console-card glass-card" id="agent-console">
+        <div class="console-header">
+          <h2 class="console-title">
+            <i class="fa-solid fa-terminal"></i> CivicPulse Autonomous City-Desk Agent
+          </h2>
+          <span class="header-stat-label" id="agent-status-label">Idle</span>
+        </div>
+        
+        <!-- Selected Issue Details Banner -->
+        <div id="console-issue-details" class="console-issue-banner">
+          <div class="console-issue-title-wrap">
+            <h4 id="console-issue-title">Selected Issue</h4>
+            <span id="console-issue-meta">Select an issue to inspect details.</span>
+          </div>
+          <div class="console-issue-action-wrap">
+            <span id="console-verification-badge" class="issue-badge" style="color: var(--accent-primary); border-color: rgba(6, 182, 212, 0.2); font-size: 0.65rem; display: flex; align-items: center; gap: 0.25rem;">
+              <i class="fa-solid fa-circle-check"></i> <span id="verification-count-label">0</span>
+            </span>
+            <button class="btn-verify-badge" id="btn-verify-issue">
+              <i class="fa-solid fa-thumbs-up"></i> Verify
+            </button>
+          </div>
+        </div>
+        
+        <!-- Interactive Pipeline Steps -->
+        <div class="console-pipeline">
+          <div class="pipeline-step" id="step-planning">
+            <div class="pipeline-dot"></div>
+            <span class="pipeline-label">Planning</span>
+          </div>
+          <div class="pipeline-step" id="step-vision">
+            <div class="pipeline-dot"></div>
+            <span class="pipeline-label">Gemini Vision</span>
+          </div>
+          <div class="pipeline-step" id="step-triage">
+            <div class="pipeline-dot"></div>
+            <span class="pipeline-label">Triaging</span>
+          </div>
+          <div class="pipeline-step" id="step-complaint">
+            <div class="pipeline-dot"></div>
+            <span class="pipeline-label">Drafting Report</span>
+          </div>
+          <div class="pipeline-step" id="step-match">
+            <div class="pipeline-dot"></div>
+            <span class="pipeline-label">Hero Match</span>
+          </div>
+        </div>
+        
+        <!-- Console Terminal Logs -->
+        <div class="console-terminal" id="terminal-logs">
+          <div class="terminal-line system">CivicPulse Agent Terminal v1.0.0 initialized.</div>
+          <div class="terminal-line input">Select a community report from the feed to deploy the autonomous triage agent...</div>
+        </div>
+        
+        <!-- Execution Panel & Results -->
+        <div class="console-actions">
+          <button class="btn btn-secondary btn-xs" id="btn-view-results" style="display: none;">
+            <i class="fa-solid fa-square-poll-horizontal"></i> View Agent Outputs
+          </button>
+          <button class="btn btn-primary" id="btn-run-agent" disabled>
+            <i class="fa-solid fa-play"></i> Run Triage Agent
+          </button>
+        </div>
+
+        <!-- Dynamic Output Container (Grievance drafts/matched heroes) -->
+        <div class="agent-results-view" id="agent-results" style="display: none;">
+          <div class="agent-results-tabs">
+            <button class="results-tab active" data-tab="tab-vision">Vision AI Tags</button>
+            <button class="results-tab" data-tab="tab-grievance">Draft Grievance</button>
+            <button class="results-tab" data-tab="tab-volunteers">Matched Heroes</button>
+          </div>
+          <div class="results-content" id="results-content-box">
+            <!-- Filled dynamically -->
+          </div>
+          <!-- Grievance Action Hub (only visible when grievance tab active) -->
+          <div id="grievance-actions-hub" class="grievance-actions-hub" style="display: none;">
+            <button type="button" class="btn btn-secondary btn-xs" id="btn-copy-grievance"><i class="fa-solid fa-copy"></i> Copy</button>
+            <button type="button" class="btn btn-secondary btn-xs" id="btn-download-grievance"><i class="fa-solid fa-file-arrow-down"></i> Download</button>
+            <a href="#" id="link-email-grievance" class="btn btn-primary btn-xs" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fa-solid fa-paper-plane"></i> Email Authority</a>
+          </div>
+        </div>
+
+        <!-- Comments & Timeline Section -->
+        <div id="console-comments-section" class="comments-section-container" style="display: none;">
+          <h3 class="comments-section-title"><i class="fa-solid fa-comments"></i> Community Timeline & Updates</h3>
+          <div id="comments-timeline" class="comments-timeline-list">
+            <!-- Rendered dynamically -->
+          </div>
+          <form id="form-add-comment" class="comments-form">
+            <input type="text" id="input-comment-text" class="form-input comment-input" placeholder="Post a status update or community comment..." required>
+            <button type="submit" class="btn btn-primary btn-xs comment-submit-btn"><i class="fa-solid fa-paper-plane"></i> Post</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: User Achievements, Volunteer Mode & Dashboard -->
+    <section class="grid-col grid-right">
+      
+      <!-- User Profile Card -->
+      <div class="profile-card glass-card">
+        <div class="profile-header">
+          <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=CivicHero" alt="Avatar" class="profile-avatar" id="user-avatar">
+          <div>
+            <h3 class="profile-name" id="user-name">Alex Carter</h3>
+            <span class="profile-rank" id="user-rank">Citizen Activist</span>
+          </div>
+        </div>
+        
+        <div class="profile-stats-grid">
+          <div class="profile-stat-box">
+            <span class="profile-stat-val" id="user-impact-points">120</span>
+            <span class="profile-stat-lbl">Impact Points</span>
+          </div>
+          <div class="profile-stat-box">
+            <span class="profile-stat-val" id="user-verifications">4</span>
+            <span class="profile-stat-lbl">Resolutions</span>
+          </div>
+        </div>
+        
+        <h4 class="section-subtitle">Unlocked Badges</h4>
+        <div class="badges-row" id="badges-container">
+          <div class="badge-icon unlocked" data-title="Eco-Reporter: Reported your first issue" id="badge-reporter">
+            <i class="fa-solid fa-bullhorn"></i>
+          </div>
+          <div class="badge-icon" data-title="Pothole Patrol: Resolve 2 infrastructure issues" id="badge-pothole">
+            <i class="fa-solid fa-road"></i>
+          </div>
+          <div class="badge-icon" data-title="Trash Terminator: Resolve 2 sanitation issues" id="badge-trash">
+            <i class="fa-solid fa-trash-can"></i>
+          </div>
+          <div class="badge-icon" data-title="Civic Guardian: Resolve 5 issues total" id="badge-guardian">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Task Board (Visible in Hero Mode) OR Analytics Summary (Visible in Citizen Mode) -->
+      <div class="glass-card flex-grow-1" id="interactive-portal-card" style="display: flex; flex-direction: column; overflow: hidden;">
+        <!-- Dynamic Header based on Toggle -->
+        <div id="portal-title-area" style="margin-bottom: 0.5rem;">
+          <h2 class="feed-title" id="portal-title"><i class="fa-solid fa-chart-pie"></i> Local Impact Charts</h2>
+        </div>
+        
+        <!-- Content Area A: Analytics & Predictions (Default Citizen Mode) -->
+        <div id="portal-citizen-content" class="portal-citizen-wrapper">
+          <!-- Tabs for citizen portal -->
+          <div class="portal-tabs">
+            <button type="button" class="portal-tab active" data-portal-tab="charts">Charts</button>
+            <button type="button" class="portal-tab" data-portal-tab="predictions">Predictive Insights</button>
+          </div>
+
+          <!-- Panel 1: Charts -->
+          <div class="portal-panel" id="portal-panel-charts">
+            <div class="chart-card glass-card" style="flex: 1; min-height: 100px; padding: 0.5rem;">
+              <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-card glass-card" style="flex: 1; min-height: 100px; padding: 0.5rem;">
+              <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 2: Predictions -->
+          <div class="portal-panel predictions-panel" id="portal-panel-predictions" style="display: none;">
+            <div class="prediction-intro">
+              <p>CivicPulse uses historic coordinate density, categorizations, and weather patterns to forecast future community risks.</p>
+              <button type="button" class="btn-toggle-predictions-ctrl" id="btn-toggle-predictions">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Toggle Predictive Hotspots
+              </button>
+            </div>
+            
+            <div class="predictions-list">
+              <div class="prediction-item risk-high">
+                <h5><i class="fa-solid fa-triangle-exclamation"></i> High Risk: Road Decay Zone</h5>
+                <p>Density threshold exceeded in East Indiranagar. Pothole propagation rate estimated at +1.4/week.</p>
+              </div>
+              <div class="prediction-item risk-medium">
+                <h5><i class="fa-solid fa-droplet"></i> Monsoon Water-logging Risk</h5>
+                <p>Koramangala Block 3 grid identifies high risk of localized utility blockage based on water main leak logs.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Content Area B: Volunteer tasks (Hero Mode) -->
+        <div id="portal-hero-content" style="display: none; flex: 1; flex-direction: column; overflow: hidden;">
+          <div class="hero-tasks-container" id="hero-tasks-list">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Leaderboard Card -->
+      <div class="leaderboard-card glass-card">
+        <h2 class="feed-title" style="margin-bottom: 0.5rem;"><i class="fa-solid fa-trophy"></i> Hero Leaderboard</h2>
+        <div class="leaderboard-list" id="leaderboard-list">
+          <!-- Filled dynamically in app.js -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: Report Issue Wizard -->
+  <div class="modal-backdrop" id="modal-report">
+    <div class="modal-content glass-card">
+      <div class="modal-header">
+        <h2 class="feed-title"><i class="fa-solid fa-circle-nodes"></i> Report New Issue</h2>
+        <button class="modal-close" id="btn-close-report"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <form id="form-new-report">
+        <div class="form-group">
+          <label class="form-label" for="report-title">Issue Title</label>
+          <input type="text" id="report-title" class="form-input" placeholder="e.g. Broken streetlight on Elm St" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="report-category">Category</label>
+          <select id="report-category" class="form-input" style="background-color: var(--bg-color);" required>
+            <option value="infrastructure">Infrastructure & Roads</option>
+            <option value="sanitation">Sanitation & Garbage</option>
+            <option value="utilities">Utilities & Leakages</option>
+            <option value="safety">Public Safety & Obstruction</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Incident Photo</label>
+          <div class="photo-tabs">
+            <button type="button" class="photo-tab active" data-photo-mode="presets">Presets</button>
+            <button type="button" class="photo-tab" data-photo-mode="upload">Upload File</button>
+            <button type="button" class="photo-tab" data-photo-mode="camera">Use Camera</button>
+          </div>
+          
+          <!-- Content 1: Presets -->
+          <div class="photo-panel" id="photo-panel-presets">
+            <div class="photo-picker-grid" id="photo-selector">
+              <div class="photo-picker-item selected" data-photo="pothole">
+                <!-- SVG representation of Pothole -->
+                <svg viewBox="0 0 100 100" style="width:100%;height:100%;">
+                  <rect width="100" height="100" fill="#333" />
+                  <ellipse cx="50" cy="50" rx="30" ry="15" fill="#111" />
+                  <path d="M30 48 L45 52 L55 45 L70 52" stroke="#555" stroke-width="3" fill="none" />
+                </svg>
+                <span class="photo-picker-label">Deep Pothole</span>
+              </div>
+              <div class="photo-picker-item" data-photo="streetlight">
+                <!-- SVG representation of Street Light -->
+                <svg viewBox="0 0 100 100" style="width:100%;height:100%;">
+                  <rect width="100" height="100" fill="#222" />
+                  <line x1="50" y1="90" x2="50" y2="20" stroke="#777" stroke-width="4" />
+                  <path d="M40 20 L60 20 L55 10 L45 10 Z" fill="#555" />
+                  <circle cx="50" cy="25" r="5" fill="#fef08a" opacity="0.3" />
+                </svg>
+                <span class="photo-picker-label">Dark Streetlamp</span>
+              </div>
+              <div class="photo-picker-item" data-photo="garbage">
+                <!-- SVG representation of Garbage -->
+                <svg viewBox="0 0 100 100" style="width:100%;height:100%;">
+                  <rect width="100" height="100" fill="#224233" />
+                  <rect x="35" y="40" width="30" height="40" rx="5" fill="#15803d" />
+                  <path d="M40 35 L60 35 M50 35 L50 25" stroke="#fff" stroke-width="3" />
+                </svg>
+                <span class="photo-picker-label">Trash Pile</span>
+              </div>
+              <div class="photo-picker-item" data-photo="leakage">
+                <!-- SVG representation of Water Leak -->
+                <svg viewBox="0 0 100 100" style="width:100%;height:100%;">
+                  <rect width="100" height="100" fill="#1e3a5f" />
+                  <circle cx="50" cy="40" r="15" fill="none" stroke="#60a5fa" stroke-width="5" />
+                  <path d="M50 55 C50 65 60 70 50 80" stroke="#3b82f6" stroke-width="4" fill="none" />
+                </svg>
+                <span class="photo-picker-label">Water Leak</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Content 2: Upload File -->
+          <div class="photo-panel" id="photo-panel-upload" style="display: none;">
+            <div class="upload-dropzone" id="upload-dropzone">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span>Drag & drop or click to upload image</span>
+              <input type="file" id="input-file-upload" accept="image/*" style="display: none;">
+            </div>
+            <div id="upload-preview-container" class="upload-preview-row" style="display: none;">
+              <img id="upload-preview" src="">
+              <span id="upload-file-name">filename.jpg</span>
+              <button type="button" id="btn-remove-upload" class="btn-remove-media"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+
+          <!-- Content 3: Camera Capture -->
+          <div class="photo-panel" id="photo-panel-camera" style="display: none;">
+            <div class="camera-controls">
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-start-camera"><i class="fa-solid fa-video"></i> Start Camera</button>
+              <button type="button" class="btn btn-primary btn-xs" id="btn-capture-photo" style="display: none;"><i class="fa-solid fa-camera"></i> Capture</button>
+            </div>
+            <div id="camera-view-container" class="camera-view-box" style="display: none;">
+              <video id="video-stream" autoplay playsinline></video>
+              <canvas id="canvas-photo" style="display: none;"></canvas>
+            </div>
+            <div id="camera-preview-container" class="upload-preview-row" style="display: none;">
+              <img id="camera-preview" src="">
+              <span style="font-size: 0.7rem; color: var(--text-secondary); flex: 1;">Snapshot captured</span>
+              <button type="button" id="btn-remove-camera" class="btn-remove-media"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="report-description">Description & Details</label>
+          <textarea id="report-description" class="form-input" rows="3" placeholder="Describe the location, hazard level, and exact issue..." required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="report-severity">Severity Rating</label>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <input type="range" id="report-severity" min="1" max="4" value="2" class="form-input" style="flex: 1; padding: 0;">
+            <span id="severity-label" class="issue-badge badge-medium" style="width: 70px; text-align: center;">Medium</span>
+          </div>
+        </div>
+        
+        <div style="color: var(--text-muted); font-size: 0.7rem; margin-bottom: 1rem; border: 1px solid var(--surface-border); padding: 0.5rem; border-radius: var(--radius-sm); background: rgba(0,0,0,0.1);">
+          <i class="fa-solid fa-map-pin"></i> <strong>Location Hint:</strong> Click anywhere on the map after submitting to fine-tune the geographic location. A default center marker is assigned initially.
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-report">Cancel</button>
+          <button type="submit" class="btn btn-primary">File Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Gemini AI Settings -->
+  <div class="modal-backdrop" id="modal-api-settings">
+    <div class="modal-content glass-card" style="width: 400px;">
+      <div class="modal-header">
+        <h2 class="feed-title"><i class="fa-solid fa-gear"></i> Gemini AI Settings</h2>
+        <button class="modal-close" id="btn-close-api-settings"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <div class="form-group" style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.45; margin-bottom: 1rem; background: rgba(0,0,0,0.15); border: 1px solid var(--surface-border); padding: 0.6rem; border-radius: var(--radius-sm);">
+        <i class="fa-solid fa-circle-info" style="color: var(--accent-primary);"></i>
+        Configure your Gemini API key to enable live vision categorization, hazard estimations, and municipal complaint generation powered directly by Google AI Studio.
+        <br><br>
+        Key is stored safely inside your browser's local storage.
+      </div>
+      
+      <form id="form-api-settings">
+        <div class="form-group">
+          <label class="form-label" for="input-api-key">Gemini API Key</label>
+          <input type="password" id="input-api-key" class="form-input" placeholder="AIzaSy...">
+        </div>
+        
+        <div class="checkbox-setting-row">
+          <input type="checkbox" id="check-enable-live">
+          <label for="check-enable-live">Enable Live Gemini Mode</label>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-api-settings">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Chart.js for premium graphics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
