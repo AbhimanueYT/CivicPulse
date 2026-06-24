@@ -12,3 +12,7 @@ desktop.ini
 *.sln
 *.sw?
 .history/
+
+# Challenge files
+*.pdf
+
